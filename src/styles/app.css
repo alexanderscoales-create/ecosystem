@@ -1,0 +1,607 @@
+/* ==========================================================================
+   ARES habitat interface
+   Full-bleed imagery carries everything. The only boxes are the hover card
+   and the room panel; both sit on a soft dark scrim over the art.
+   ========================================================================== */
+
+:root {
+  /* sampled from the art */
+  --ink: #070b0d;
+  --ink-soft: #0d1417;
+  --paper: #f0e6d6;
+  --paper-dim: #b8ac99;
+  --amber: #ffb861;
+  --lantern: #ffdca6;
+  --teal: #5fb9a6;
+  --teal-deep: #2f6b6d;
+  --brass: #d9a75a;
+
+  --scrim: rgba(9, 13, 15, 0.68);
+  --scrim-strong: rgba(7, 11, 12, 0.82);
+  --hairline: rgba(240, 230, 214, 0.14);
+
+  --font: 'Inter', 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  --crossfade: 620ms;
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--font);
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.app {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--ink);
+}
+
+/* --------------------------------------------------------------------------
+   Hub — the habitat itself, edge to edge
+   -------------------------------------------------------------------------- */
+
+.hub {
+  position: absolute;
+  inset: 0;
+  transition: filter var(--crossfade) var(--ease);
+}
+
+.hub--dimmed {
+  filter: brightness(0.5) saturate(0.7);
+  pointer-events: none;
+}
+
+.hub__plate {
+  position: absolute;
+  inset: 0;
+  /* the drift moves the plate, so its edges must never enter the frame */
+  transform: scale(1.04);
+  transform-origin: 50% 52%;
+}
+
+.hub--ambient .hub__plate {
+  animation: drift 40s ease-in-out infinite alternate;
+}
+
+.hub__image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  user-select: none;
+}
+
+/* Uneven lantern flicker over the lit structures. Nothing else moves. */
+.hub__flicker {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: 0;
+  background:
+    radial-gradient(circle at 50% 71%, rgba(255, 143, 69, 0.4), transparent 16%),
+    radial-gradient(circle at 20.5% 39%, rgba(255, 184, 97, 0.32), transparent 13%),
+    radial-gradient(circle at 15% 63%, rgba(255, 184, 97, 0.3), transparent 12%),
+    radial-gradient(circle at 24% 86%, rgba(255, 220, 166, 0.28), transparent 12%),
+    radial-gradient(circle at 88.5% 65%, rgba(217, 167, 90, 0.26), transparent 11%),
+    radial-gradient(circle at 50% 17%, rgba(255, 220, 166, 0.22), transparent 12%);
+}
+
+.hub--ambient .hub__flicker {
+  animation: flicker 11s steps(1, end) infinite;
+}
+
+@keyframes drift {
+  0%   { transform: scale(1.04) translate3d(-0.8%, 0.35%, 0); }
+  100% { transform: scale(1.04) translate3d(0.8%, -0.45%, 0); }
+}
+
+/* deliberately uneven: lanterns do not pulse on a metronome */
+@keyframes flicker {
+  0%, 6%    { opacity: 0.18; }
+  7%, 11%   { opacity: 0.52; }
+  12%, 27%  { opacity: 0.3; }
+  28%, 30%  { opacity: 0.62; }
+  31%, 46%  { opacity: 0.24; }
+  47%, 49%  { opacity: 0.46; }
+  50%, 58%  { opacity: 0.34; }
+  59%, 61%  { opacity: 0.14; }
+  62%, 79%  { opacity: 0.4; }
+  80%, 83%  { opacity: 0.6; }
+  84%, 100% { opacity: 0.26; }
+}
+
+/* --------------------------------------------------------------------------
+   Hotspots — invisible until hovered or focused
+   -------------------------------------------------------------------------- */
+
+.hub__hotspots {
+  position: absolute;
+  inset: 0;
+}
+
+.hotspot {
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  border-radius: 12px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hotspot__bloom,
+.hotspot__ring {
+  position: absolute;
+  inset: -14%;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 340ms var(--ease);
+}
+
+.hotspot__bloom {
+  background: radial-gradient(
+    ellipse at 50% 55%,
+    rgba(255, 220, 166, 0.42),
+    rgba(255, 184, 97, 0.2) 45%,
+    transparent 72%
+  );
+}
+
+.hotspot__ring {
+  inset: -4%;
+  border-radius: 14px;
+  box-shadow: inset 0 0 0 1px rgba(255, 220, 166, 0.28);
+}
+
+.hotspot:hover .hotspot__bloom,
+.hotspot.is-active .hotspot__bloom,
+.hotspot:focus-visible .hotspot__bloom {
+  opacity: 1;
+}
+
+/* the ring is only ever drawn by the reveal control, never on hover */
+
+/* offline structures stay in the scene, dimmed */
+.hotspot--offline {
+  filter: saturate(0.4);
+}
+
+.hotspot--offline::before {
+  content: '';
+  position: absolute;
+  inset: -8%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 55%, rgba(5, 8, 10, 0.62), transparent 70%);
+  pointer-events: none;
+}
+
+.hotspot--offline .hotspot__bloom {
+  background: radial-gradient(
+    ellipse at 50% 55%,
+    rgba(184, 172, 153, 0.2),
+    transparent 70%
+  );
+}
+
+.hotspot:focus-visible {
+  outline: 2px solid var(--lantern);
+  outline-offset: 4px;
+}
+
+/* the reveal control outlines every structure for a moment */
+.hub--revealed .hotspot__ring {
+  opacity: 0.55;
+}
+
+/* --------------------------------------------------------------------------
+   Hover card
+   -------------------------------------------------------------------------- */
+
+.hovercard {
+  position: fixed;
+  z-index: 30;
+  min-width: 178px;
+  max-width: 260px;
+  padding: 10px 13px 11px;
+  border-radius: 9px;
+  background: var(--scrim);
+  backdrop-filter: blur(9px);
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  animation: cardIn 200ms var(--ease);
+}
+
+.hovercard p {
+  margin: 0;
+}
+
+.hovercard__room {
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--paper);
+}
+
+.hovercard__agent {
+  margin-top: 3px !important;
+  display: flex;
+  gap: 7px;
+  align-items: baseline;
+  font-size: 11.5px;
+}
+
+.hovercard__name {
+  color: var(--amber);
+  letter-spacing: 0.09em;
+  font-weight: 600;
+}
+
+.hovercard__role {
+  color: var(--paper-dim);
+}
+
+.hovercard__meta {
+  margin-top: 7px !important;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--paper-dim);
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--paper-dim);
+  flex: none;
+}
+
+.hovercard__meta--live .dot,
+.panel__status--live .dot {
+  background: var(--teal);
+  box-shadow: 0 0 8px rgba(95, 185, 166, 0.8);
+}
+
+.hovercard__meta--partial .dot,
+.panel__status--partial .dot {
+  background: var(--amber);
+  box-shadow: 0 0 8px rgba(255, 184, 97, 0.7);
+}
+
+.hovercard__meta--offline .dot,
+.panel__status--offline .dot {
+  background: #6c6558;
+}
+
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* --------------------------------------------------------------------------
+   Room — stepping into a structure
+   -------------------------------------------------------------------------- */
+
+.room {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  opacity: 0;
+  transition: opacity var(--crossfade) var(--ease);
+}
+
+.room.is-entered {
+  opacity: 1;
+}
+
+.room__image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transform: scale(1.06);
+  transition: transform var(--crossfade) var(--ease);
+  user-select: none;
+}
+
+.room.is-entered .room__image {
+  transform: scale(1);
+}
+
+/* an offline room reads dimmed here too, never hidden */
+.room--offline .room__image {
+  filter: saturate(0.68) brightness(0.8);
+}
+
+.room__back {
+  position: absolute;
+  left: 22px;
+  top: 58px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px 7px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--scrim);
+  backdrop-filter: blur(9px);
+  color: var(--paper);
+  font-size: 11.5px;
+  letter-spacing: 0.06em;
+  text-transform: lowercase;
+  cursor: pointer;
+  transition: background 200ms var(--ease);
+}
+
+.room__back:hover {
+  background: var(--scrim-strong);
+}
+
+.room__back svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: var(--amber);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.room__back kbd {
+  font: inherit;
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--paper-dim);
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(240, 230, 214, 0.1);
+}
+
+.room__back:focus-visible,
+.tool:focus-visible {
+  outline: 2px solid var(--lantern);
+  outline-offset: 3px;
+}
+
+/* --------------------------------------------------------------------------
+   Room panel — the one translucent panel, bottom left
+   -------------------------------------------------------------------------- */
+
+.panel {
+  position: absolute;
+  left: 22px;
+  bottom: 22px;
+  width: min(360px, calc(100vw - 44px));
+  padding: 16px 18px 17px;
+  border-radius: 12px;
+  background: var(--scrim);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 18px 52px rgba(0, 0, 0, 0.52);
+  animation: panelIn 620ms var(--ease) both;
+  animation-delay: 160ms;
+}
+
+.panel p {
+  margin: 0;
+}
+
+.panel__room {
+  font-size: 10.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--paper-dim);
+}
+
+.panel__agent {
+  margin: 6px 0 0;
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: 0.11em;
+  color: var(--amber);
+}
+
+.panel__role {
+  margin-top: 2px !important;
+  font-size: 12px;
+  color: var(--paper);
+}
+
+.panel__personality {
+  margin-top: 12px !important;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--teal);
+}
+
+.panel__purpose {
+  margin-top: 8px !important;
+  font-size: 12px;
+  color: var(--paper-dim);
+}
+
+.panel__facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 14px;
+  margin: 15px 0 0;
+  padding-top: 13px;
+  border-top: 1px solid var(--hairline);
+}
+
+.panel__fact--wide {
+  grid-column: 1 / -1;
+}
+
+.panel__facts dt {
+  font-size: 9.5px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(240, 230, 214, 0.42);
+}
+
+.panel__facts dd {
+  margin: 3px 0 0;
+  font-size: 12px;
+  color: var(--paper);
+}
+
+.panel__status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+@keyframes panelIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* --------------------------------------------------------------------------
+   Chrome — wordmark and three icon buttons, straight on the image
+   -------------------------------------------------------------------------- */
+
+.wordmark {
+  position: absolute;
+  z-index: 40;
+  left: 22px;
+  top: 18px;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.wordmark__text {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.42em;
+  color: var(--paper);
+  text-shadow: 0 1px 14px rgba(0, 0, 0, 0.8);
+}
+
+.tools {
+  position: absolute;
+  z-index: 40;
+  right: 20px;
+  top: 15px;
+  display: flex;
+  gap: 4px;
+}
+
+.tool {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(240, 230, 214, 0.62);
+  cursor: pointer;
+  transition: background 200ms var(--ease), color 200ms var(--ease);
+}
+
+.tool:hover {
+  background: rgba(9, 13, 15, 0.5);
+  color: var(--paper);
+}
+
+.tool.is-on {
+  color: var(--amber);
+}
+
+.tool svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 1px 6px rgba(0, 0, 0, 0.9));
+}
+
+/* --------------------------------------------------------------------------
+   Sprite anchors — empty markers for the animated agents of the second pass
+   -------------------------------------------------------------------------- */
+
+.sprites {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.sprite-anchor {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Reduced motion
+   -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --crossfade: 1ms; }
+
+  .hub--ambient .hub__plate,
+  .hub--ambient .hub__flicker {
+    animation: none;
+  }
+
+  .hub__flicker { opacity: 0.28; }
+
+  .hovercard,
+  .panel {
+    animation: none;
+  }
+
+  .room__image,
+  .room,
+  .hub {
+    transition-duration: 1ms;
+  }
+
+  .room__image { transform: none; }
+}
